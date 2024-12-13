@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech to Text</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 50px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        input[type="file"] {
+            padding: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .result, .error {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .result {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <h1>Speech to Text</h1>
+    <form id="uploadForm">
+        <input type="file" id="audioFile" accept="audio/*" required>
+        <button type="submit">Распознать</button>
+    </form>
+    <div id="output" class="result" style="display: none;"></div>
+    <div id="error" class="error" style="display: none;"></div>
+
+    <script>
+        const form = document.getElementById("uploadForm");
+        const output = document.getElementById("output");
+        const error = document.getElementById("error");
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            // Скрываем предыдущие результаты
+            output.style.display = "none";
+            error.style.display = "none";
+
+            const fileInput = document.getElementById("audioFile");
+            const file = fileInput.files[0];
+
+            if (!file) {
+                error.style.display = "block";
+                error.textContent = "Выберите файл для загрузки.";
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            try {
+                // Отключаем кнопку во время загрузки
+                form.querySelector("button").disabled = true;
+
+                const response = await fetch("/transcribe", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Отображаем распознанный текст
+                    output.style.display = "block";
+                    output.innerHTML = `
+                        <strong>Распознанный текст:</strong><br>
+                        ${data.text}<br>
+                        <strong>Время обработки:</strong> ${data.elapsed_time}
+                    `;
+                } else {
+                    // Отображаем ошибку
+                    error.style.display = "block";
+                    error.textContent = `Ошибка: ${data.error}`;
+                }
+            } catch (e) {
+                error.style.display = "block";
+                error.textContent = `Ошибка соединения: ${e.message}`;
+            } finally {
+                // Включаем кнопку обратно
+                form.querySelector("button").disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
